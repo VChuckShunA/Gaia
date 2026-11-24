@@ -1,0 +1,163 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "gaia-log-v3",
+	"title": "Gaia log record",
+	"description": "One line of a Gaia session log (JSON Lines), schema version 3. Records may hold a 'project' object, whose fields belong to the project's probe and rules.",
+	"type": "object",
+	"required": ["t", "f", "type"],
+	"properties": {
+		"t": { "type": "number", "description": "World time in seconds, which follows pause and time dilation." },
+		"f": { "type": "integer", "minimum": 0, "description": "Engine frame number, for matching against Insights." },
+		"type": { "enum": ["session", "agent", "snapshot", "change", "event", "anomaly", "removed", "summary", "coverage"] }
+	},
+	"definitions": {
+		"name": { "type": ["string", "null"], "description": "A name; null when it's None." },
+		"location": {
+			"type": "array",
+			"items": { "type": "integer" },
+			"minItems": 3,
+			"maxItems": 3,
+			"description": "x, y and z in whole centimetres."
+		},
+		"states": { "type": "array", "items": { "type": "string" }, "description": "Active StateTree states, outermost first. Empty in builds without the gameplay debugger." },
+		"project": { "type": "object", "description": "Written by the project's FProjectSample or rules." }
+	},
+	"allOf": [
+		{
+			"if": { "properties": { "type": { "const": "session" } } },
+			"then": {
+				"required": ["schema", "label", "map", "netMode", "started", "build", "engine"],
+				"properties": {
+					"schema": { "const": 3 },
+					"label": { "type": "string", "description": "What the test running the session calls it; empty otherwise." },
+					"map": { "type": "string" },
+					"netMode": { "type": "string" },
+					"started": { "type": "string", "format": "date-time" },
+					"build": { "type": "string" },
+					"engine": { "type": "string" }
+				}
+			}
+		},
+		{
+			"if": { "properties": { "type": { "const": "agent" } } },
+			"then": {
+				"required": ["agent", "label", "class", "assets", "sight", "hearing", "damageSense"],
+				"properties": {
+					"agent": { "type": "string", "description": "The actor's unique name, the same for the whole session." },
+					"label": { "type": "string", "description": "The name shown in the editor." },
+					"class": { "type": "string" },
+					"assets": { "type": "object", "additionalProperties": { "$ref": "#/definitions/name" }, "description": "What it runs, as a role and an asset's name, from the project's probe." },
+					"sight": { "type": "boolean" },
+					"hearing": { "type": "boolean" },
+					"damageSense": { "type": "boolean" }
+				}
+			}
+		},
+		{
+			"if": { "properties": { "type": { "const": "snapshot" } } },
+			"then": {
+				"required": ["agent", "alive", "location", "velocity", "movement", "activity", "inCombat", "target", "inSight", "canAct", "lastAction", "focus", "tree", "states", "path"],
+				"properties": {
+					"agent": { "type": "string" },
+					"alive": { "type": "boolean" },
+					"location": { "$ref": "#/definitions/location" },
+					"velocity": { "$ref": "#/definitions/location" },
+					"timeDilation": { "type": "number", "description": "The pawn's own time dilation, on top of the world's; 0 while the game has paused it. Since plugin 0.2.0." },
+					"movement": { "$ref": "#/definitions/name" },
+					"activity": { "$ref": "#/definitions/name" },
+					"inCombat": { "type": "boolean" },
+					"target": { "$ref": "#/definitions/name" },
+					"inSight": { "type": "boolean" },
+					"canAct": { "type": "boolean" },
+					"lastAction": { "type": "number", "description": "World time of its last action on a target; negative if none." },
+					"focus": { "$ref": "#/definitions/name" },
+					"tree": { "$ref": "#/definitions/name" },
+					"states": { "$ref": "#/definitions/states" },
+					"path": { "$ref": "#/definitions/name" },
+					"goal": { "$ref": "#/definitions/location", "description": "Only while it has a path." },
+					"project": { "$ref": "#/definitions/project" }
+				}
+			}
+		},
+		{
+			"if": { "properties": { "type": { "const": "change" } } },
+			"then": {
+				"required": ["agent"],
+				"description": "Only the fields that changed since the last capture, with their new values.",
+				"properties": {
+					"agent": { "type": "string" },
+					"alive": { "type": "boolean" },
+					"timeDilation": { "type": "number" },
+					"activity": { "$ref": "#/definitions/name" },
+					"inCombat": { "type": "boolean" },
+					"target": { "$ref": "#/definitions/name" },
+					"inSight": { "type": "boolean" },
+					"canAct": { "type": "boolean" },
+					"tree": { "$ref": "#/definitions/name" },
+					"states": { "$ref": "#/definitions/states" },
+					"path": { "$ref": "#/definitions/name" },
+					"focus": { "$ref": "#/definitions/name" },
+					"project": { "$ref": "#/definitions/project" }
+				}
+			}
+		},
+		{
+			"if": { "properties": { "type": { "const": "event" } } },
+			"then": {
+				"required": ["agent", "event", "detail"],
+				"properties": {
+					"agent": { "type": "string" },
+					"event": { "type": "string", "description": "The last part of the event's gameplay tag." },
+					"detail": { "type": "string" }
+				}
+			}
+		},
+		{
+			"if": { "properties": { "type": { "const": "anomaly" } } },
+			"then": {
+				"required": ["agent", "rule", "severity", "message"],
+				"properties": {
+					"agent": { "$ref": "#/definitions/name", "description": "Null for a problem with the world." },
+					"rule": { "type": "string" },
+					"severity": { "enum": ["warning", "error"] },
+					"message": { "type": "string" }
+				}
+			}
+		},
+		{
+			"if": { "properties": { "type": { "const": "removed" } } },
+			"then": {
+				"required": ["agent"],
+				"properties": { "agent": { "type": "string" } }
+			}
+		},
+		{
+			"if": { "properties": { "type": { "const": "summary" } } },
+			"then": {
+				"required": ["agent", "firstSeen", "lastSeen", "timeInActivity", "problems", "problemTime"],
+				"properties": {
+					"agent": { "type": "string" },
+					"firstSeen": { "type": "number" },
+					"lastSeen": { "type": "number" },
+					"timeInActivity": { "type": "object", "additionalProperties": { "type": "number" } },
+					"problems": { "type": "object", "additionalProperties": { "type": "integer" }, "description": "How many times each rule reported." },
+					"problemTime": { "type": "object", "additionalProperties": { "type": "number" }, "description": "How long what each rule reported lasted, in seconds. Rules that count occurrences have none." },
+					"project": { "$ref": "#/definitions/project" }
+				}
+			}
+		},
+		{
+			"if": { "properties": { "type": { "const": "coverage" } } },
+			"then": {
+				"required": ["class", "agents", "events", "states"],
+				"description": "One per agent class, at the end: what happened, so a test can see what never did.",
+				"properties": {
+					"class": { "$ref": "#/definitions/name" },
+					"agents": { "type": "integer", "minimum": 1 },
+					"events": { "type": "object", "additionalProperties": { "type": "integer" }, "description": "Events recorded, by name." },
+					"states": { "type": "object", "additionalProperties": { "type": "integer" }, "description": "Times each set of active states was entered, joined outermost first." }
+				}
+			}
+		}
+	]
+}

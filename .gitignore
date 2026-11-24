@@ -1,0 +1,9 @@
+# Built by Unreal in the project that uses the plugin
+Binaries/
+Intermediate/
+Saved/
+.vs/
+*.VC.db
+*.opensdf
+*.sdf
+*.suo
