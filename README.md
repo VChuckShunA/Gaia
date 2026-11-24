@@ -133,4 +133,4 @@ Take it out of `.uproject`, delete the `Plugins/Gaia` folder, and remove `ProbeC
 
 ## Licence
 
-No licence has been chosen yet, so all rights are reserved. Add a `LICENSE` file before reusing or redistributing the code.
+[MIT](LICENSE). Use it, change it, ship it; keep the copyright notice.
